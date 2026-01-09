@@ -694,24 +694,95 @@
             } catch (e) { showError(e.message || "Bir hata oluştu.") }
             finally { btn.disabled = false; loader.style.display = "none"; btnText.style.display = "block" }
         }
-        function renderResult(d) {
-            document.getElementById("vidTitle").textContent = d.title;
-            document.getElementById("vidThumb").src = d.thumbnail || "./logo.png";
-            document.getElementById("vidAuthor").textContent = d.author;
-            var icon = d.platform === "youtube" ? "fa-youtube" : d.platform === "instagram" ? "fa-instagram" : d.platform === "tiktok" ? "fa-tiktok" : "fa-video";
-            document.getElementById("vidPlatform").innerHTML = '<i class="fab ' + icon + '"></i> ' + d.platform.toUpperCase();
+        // Secure Download Handler
+        async function downloadFile(url, filename) {
+
+            // Show downloading state on button if possible
+            const btn = event ? event.target.closest('.dl-btn') : null;
+            const originalText = btn ? btn.innerText : '';
+            if (btn) {
+                btn.innerText = "⏳ İndiriliyor...";
+                btn.style.opacity = "0.7";
+                btn.style.pointerEvents = "none";
+            }
+
+            try {
+                // Use API for full URL construction
+                if (url.startsWith("/api")) {
+                    url = API + url;
+                }
+
+                const response = await fetch(url);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    try {
+                        const jsonError = JSON.parse(errorText);
+                        throw new Error(jsonError.error || "İndirme başarısız oldu.");
+                    } catch (e) {
+                        if (errorText.includes("HTML")) throw new Error("Sunucu meşgul (HTML). Lütfen tekrar deneyin.");
+                        throw new Error("Sunucu hatası: " + response.status);
+                    }
+                }
+
+                const blob = await response.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(downloadUrl);
+                document.body.removeChild(a);
+
+            } catch (error) {
+                alert("İndirme Hatası: " + error.message);
+                console.error(error);
+            } finally {
+                if (btn) {
+                    btn.innerText = originalText;
+                    btn.style.opacity = "1";
+                    btn.style.pointerEvents = "auto";
+                }
+            }
+        }
+
+        function renderResult(data) {
             var card = document.getElementById("resultCard");
-            card.classList.remove("horizontal", "vertical");
-            card.classList.add(d.is_vertical ? "vertical" : "horizontal");
-            var opts = document.getElementById("dlOptions"); opts.innerHTML = "";
-            d.downloads.forEach(function (dl, i) {
-                var a = document.createElement("a");
-                a.className = i === 0 ? "dl-btn main" : "dl-btn";
-                a.innerHTML = '<i class="fas fa-download"></i> ' + dl.quality;
-                a.href = dl.url; a.download = ""; a.target = "_blank"; a.rel = "noopener";
-                opts.appendChild(a);
+            var resultArea = document.getElementById("resultArea");
+            var thumb = document.getElementById("vidThumb");
+            var title = document.getElementById("vidTitle");
+            var platform = document.getElementById("vidPlatform");
+            var author = document.getElementById("vidAuthor");
+            var options = document.getElementById("dlOptions");
+            thumb.src = data.thumbnail;
+            title.innerText = data.title;
+            author.innerText = data.author;
+            platform.innerHTML = '<i class="fab fa-' + (data.platform === 'youtube' ? 'youtube' : data.platform === 'instagram' ? 'instagram' : data.platform === 'tiktok' ? 'tiktok' : 'video') + '"></i> ' + data.platform.toUpperCase();
+            if (data.is_vertical) { card.classList.remove("horizontal"); card.classList.add("vertical") } else { card.classList.remove("vertical"); card.classList.add("horizontal") }
+            options.innerHTML = "";
+            data.downloads.forEach(function (dl) {
+                var btn = document.createElement("a");
+                btn.className = "dl-btn " + (dl.format === 'mp3' ? 'secondary' : '');
+
+                // Extract filename from URL if possible, or use a default
+                let filename = "video.mp4";
+                if (dl.url.includes("filename=")) {
+                    filename = decodeURIComponent(dl.url.split("filename=")[1].split("&")[0]);
+                }
+
+                btn.innerHTML = (dl.format === 'mp3' ? '<i class="fas fa-music"></i> ' : '<i class="fas fa-download"></i> ') + dl.quality;
+
+                if (dl.url === "#") {
+                    btn.href = "#";
+                    btn.onclick = function () { alert("Bu video için uygun format bulunamadı."); };
+                } else {
+                    btn.href = "javascript:void(0)";
+                    btn.onclick = function () { downloadFile(dl.url, filename); };
+                }
+
+                options.appendChild(btn)
             });
-            document.getElementById("resultArea").style.display = "block";
+            resultArea.style.display = "block";
             document.getElementById("resultArea").scrollIntoView({ behavior: "smooth", block: "center" });
         }
         function showError(m) { document.getElementById("errorText").textContent = m; document.getElementById("errorBox").style.display = "block" }
