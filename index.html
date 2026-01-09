@@ -676,8 +676,12 @@
             btn.disabled = true; loader.style.display = "block"; btnText.style.display = "none";
             errorBox.style.display = "none"; offlineBox.style.display = "none"; resultArea.style.display = "none";
             try {
-                var healthRes = await fetch(API + "/api/health", { method: "GET" }).catch(function () { return null });
-                if (!healthRes || !healthRes.ok) { offlineBox.style.display = "block"; return }
+                var healthRes = await fetch(API + "/api/health", { method: "GET" }).catch(function (err) { return { ok: false, status: 0, statusText: err.message }; });
+                if (!healthRes.ok) {
+                    document.getElementById("offlineBox").innerHTML = "<i class='fas fa-server'></i> Bağlantı Hatası: " + healthRes.status + " " + (healthRes.statusText || "Sunucuya Ulaşılamıyor");
+                    document.getElementById("offlineBox").style.display = "block";
+                    return;
+                }
                 var res = await fetch(API + "/api/info", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: url }) });
                 var data = await res.json();
                 if (data.error) {
