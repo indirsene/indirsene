@@ -129,7 +129,7 @@
     </div>
 
     <script>
-        const API = '/api/contact'; 
+        const API = '/api/contact';
 
         document.getElementById('contactForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -148,19 +148,26 @@
             };
 
             try {
-                await fetch(API, {
+                const response = await fetch(API, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
 
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Gönderim sırasında bir hata oluştu.');
+                }
+
                 msg.style.display = 'block';
+                msg.style.color = '#10b981'; 
                 msg.textContent = 'Mesajınız başarıyla iletildi! En kısa sürede size döneceğiz.';
                 document.getElementById('contactForm').reset();
             } catch (err) {
                 msg.style.display = 'block';
                 msg.style.color = '#ef4444';
-                msg.textContent = 'Bir hata oluştu. Lütfen daha sonra tekrar deneyin.';
+                msg.textContent = 'Bir hata oluştu: ' + err.message;
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Gönder';
