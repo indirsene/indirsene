@@ -129,7 +129,7 @@
     </div>
 
     <script>
-        const API = '/api/contact';
+        const API = 'https://indirsene-router.skytroniq.workers.dev/api/contact'; 
 
         document.getElementById('contactForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -166,7 +166,7 @@
                 document.getElementById('contactForm').reset();
             } catch (err) {
                 msg.style.display = 'block';
-                msg.style.color = '#ef4444';
+                msg.style.color = '#ef4444'; 
                 msg.textContent = 'Bir hata oluştu: ' + err.message;
             } finally {
                 btn.disabled = false;
